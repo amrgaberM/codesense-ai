@@ -17,6 +17,8 @@ from codesense.core import CodeAnalyzer, detect_language
 from codesense.models import FileReview, ReviewResult, Severity, IssueCategory
 from codesense.utils.config import settings
 
+from codesense.github.webhook import router as webhook_router
+
 
 # ============================================
 # Request/Response Models
@@ -236,7 +238,7 @@ async def detect_lang(
         "filename": filename
     }
 
-
+app.include_router(webhook_router)
 # ============================================
 # Run with uvicorn
 # ============================================
