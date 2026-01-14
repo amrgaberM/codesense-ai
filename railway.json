@@ -1,9 +1,1 @@
-﻿{
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "startCommand": "cd src && uvicorn codesense.api.app:app --host 0.0.0.0 --port \",
-    "restartPolicyType": "ON_FAILURE"
-  }
-}
+{"build":{"builder":"NIXPACKS"},"deploy":{"startCommand":"cd src && uvicorn codesense.api.app:app --host 0.0.0.0 --port $PORT","restartPolicyType":"ON_FAILURE"}}
