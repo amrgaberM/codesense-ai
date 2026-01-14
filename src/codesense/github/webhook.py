@@ -1,4 +1,4 @@
-﻿import os
+import os
 import hmac
 import hashlib
 from fastapi import APIRouter, Request, HTTPException, Header
@@ -34,18 +34,26 @@ def analyze_code(code: str) -> dict:
     return {"review": response.choices[0].message.content}
 
 async def post_comment(repo: str, pr_number: int, body: str):
+    token = os.environ.get('GITHUB_TOKEN', '')
+    print(f"Posting comment to {repo} PR #{pr_number}")
+    print(f"Token exists: {bool(token)}")
+    
     url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
     headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
+        "Authorization": f"token {token}",
         "Accept": "application/vnd.github.v3+json"
     }
     async with httpx.AsyncClient() as client:
-        await client.post(url, json={"body": body}, headers=headers)
+        response = await client.post(url, json={"body": body}, headers=headers)
+        print(f"GitHub API response: {response.status_code}")
+        print(f"GitHub API body: {response.text}")
+        return response
 
 async def get_pr_files(repo: str, pr_number: int) -> list:
+    token = os.environ.get('GITHUB_TOKEN', '')
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
     headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
+        "Authorization": f"token {token}",
         "Accept": "application/vnd.github.v3+json"
     }
     async with httpx.AsyncClient() as client:
@@ -69,14 +77,17 @@ async def github_webhook(
     data = await request.json()
     action = data.get("action")
     
-    if action not in ["opened", "synchronize"]:
+    if action not in ["opened", "synchronize", "reopened"]:
         return {"status": "ignored", "action": action}
     
     pr = data.get("pull_request", {})
     pr_number = pr.get("number")
     repo = data.get("repository", {}).get("full_name")
     
+    print(f"Processing PR #{pr_number} in {repo}")
+    
     files = await get_pr_files(repo, pr_number)
+    print(f"Found {len(files)} files")
     
     review_comments = ["## CodeSense AI Review\n"]
     
@@ -87,11 +98,15 @@ async def github_webhook(
         
         patch = file.get("patch", "")
         if patch:
+            print(f"Analyzing {filename}")
             result = analyze_code(patch)
             review_comments.append(f"### {filename}\n{result['review']}\n")
     
     if len(review_comments) > 1:
         comment_body = "\n".join(review_comments)
+        print(f"Posting comment with {len(comment_body)} chars")
         await post_comment(repo, pr_number, comment_body)
+    else:
+        print("No code files to review")
     
     return {"status": "success", "pr": pr_number}
