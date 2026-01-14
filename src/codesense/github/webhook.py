@@ -1,7 +1,5 @@
 import os
-import hmac
-import hashlib
-from fastapi import APIRouter, Request, HTTPException, Header
+from fastapi import APIRouter, Request, Header
 from typing import Optional
 from groq import Groq
 import httpx
@@ -31,16 +29,16 @@ async def post_comment(repo: str, pr_number: int, body: str):
         r = await client.post(url, json={"body": body}, headers=headers)
         return r.status_code
 
-async def get_pr_diff(repo: str, pr_number: int) -> str:
+async def get_pr_files(repo: str, pr_number: int) -> list:
     token = os.environ.get('GITHUB_TOKEN')
-    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
     headers = {
         "Authorization": f"token {token}",
-        "Accept": "application/vnd.github.v3.diff"
+        "Accept": "application/vnd.github.v3+json"
     }
     async with httpx.AsyncClient() as client:
         r = await client.get(url, headers=headers)
-        return r.text
+        return r.json()
 
 @router.post("/webhook/github")
 async def github_webhook(
@@ -60,12 +58,20 @@ async def github_webhook(
     pr_number = pr.get("number")
     repo = data.get("repository", {}).get("full_name")
     
-    diff = await get_pr_diff(repo, pr_number)
+    files = await get_pr_files(repo, pr_number)
     
-    if diff:
-        review = analyze_code(diff[:3000])
+    all_patches = []
+    for f in files:
+        patch = f.get("patch", "")
+        filename = f.get("filename", "")
+        if patch:
+            all_patches.append(f"File: {filename}\n{patch}")
+    
+    if all_patches:
+        code_to_review = "\n\n".join(all_patches)[:3000]
+        review = analyze_code(code_to_review)
         comment = f"## CodeSense AI Review\n\n{review}"
         status = await post_comment(repo, pr_number, comment)
         return {"status": "success", "pr": pr_number, "comment_status": status}
     
-    return {"status": "success", "pr": pr_number, "comment_status": "no_diff"}
+    return {"status": "success", "pr": pr_number, "comment_status": "no_files"}
