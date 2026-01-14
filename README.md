@@ -7,7 +7,7 @@
 
 **Automated Code Review Platform** — Detect security vulnerabilities, bugs, and code quality issues using AI before they reach production.
 
-[Live Demo](https://your-app.streamlit.app) · [API Docs](https://codesense-ai-production-78ab.up.railway.app/docs) · [Report Bug](https://github.com/amrgaberM/codesense-ai/issues)
+[Live Demo](https://your-app.streamlit.app) · [API Docs](https://codesense-ai-production-78ab.up.railway.app/docs) · [Report Bug](https://github.com/amrgaberM/codesense-ai/pull/8)
 
 ---
 
