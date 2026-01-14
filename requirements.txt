@@ -1,3 +1,9 @@
 streamlit
 groq
 python-dotenv
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+PyGithub
+httpx
